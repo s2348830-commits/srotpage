@@ -1,0 +1,1121 @@
+/* ============================================================
+ * css/style.css  ―  パチスロシミュレーター
+ *  参照HTML(three.js製3Dスロット筐体)の見た目を再現:
+ *   明るい筐体 / タイトルボード / 映像液晶 / 黒枠内の円筒リール
+ *   赤玉レバー / 白い楕円ストップボタン / 赤いAUTO(PUSH)ボタン
+ * ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background-color: #111;                  /* 参照HTMLと同じ背景 */
+  color: #333;
+  font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: 4px;
+  min-height: 100vh;
+  user-select: none;
+  overflow-x: hidden;                      /* スマホでの横スクロール防止 */
+  -webkit-text-size-adjust: 100%;
+}
+
+.hidden { display: none !important; }
+
+/* スマホ対応: #machine はJS(fitScale)で画面幅にスケールされる */
+#machine-wrap { position: relative; overflow: visible; }
+
+/* ================= 管理者ツール（PC・フルスクリーン専用） ================= */
+#admin-panel {
+  display: none;                            /* 狭い画面では非表示 */
+  position: fixed;
+  top: 12px;
+  left: calc(50% + 336px);                  /* スロット筐体のすぐ横 */
+  width: 218px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  flex-direction: column; gap: 5px;
+  background: rgba(25, 25, 40, .95);
+  border: 1px solid #556;
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 40;
+}
+@media (min-width: 1130px) { #admin-panel { display: flex; } }
+.admin-title { color: #fff; font-weight: bold; font-size: 15px; text-align: center; }
+.admin-note { color: #99a; font-size: 11px; text-align: center; margin-bottom: 4px; }
+.admin-sub { color: #cdf; font-size: 12px; font-weight: bold; margin-top: 8px; }
+.admin-btn {
+  background: linear-gradient(180deg, #3a3a5e, #26263e);
+  color: #dde; border: 1px solid #556;
+  border-radius: 6px; padding: 7px 8px;
+  font-size: 12px; text-align: left;
+  transition: filter .1s;
+}
+.admin-btn:hover { filter: brightness(1.3); }
+.admin-btn:active { filter: brightness(.8); }
+.admin-btn-char { text-align: center; background: linear-gradient(180deg, #2fae5f, #157a3a); color: #fff; }
+.admin-select {
+  background: #1c1c30; color: #dde;
+  border: 1px solid #556; border-radius: 6px;
+  padding: 5px; font-size: 12px; font-family: inherit;
+}
+
+/* ================= ① メイン筐体ベース（明るいキャビネット） ================= */
+#machine {
+  width: 640px;                             /* 固定幅。スマホはJS(fitScale)で縮小表示 */
+  background: linear-gradient(180deg, #f0f0f0, #d8d8d8);
+  border: 2px solid #aaa;
+  border-radius: 14px;
+  padding: 16px 18px 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5), inset 0 1px 0 #fff;
+  position: relative;
+}
+
+/* ================= ② タイトルボード（image/title.png があれば画像表示） ================= */
+#title-board {
+  width: 86%;
+  margin: 0 auto 12px;
+  background: #ffffff;
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 26px; font-weight: bold; color: #333;
+  letter-spacing: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+#title-board.has-image { padding: 0; background: #000; line-height: 0; }
+#title-img { width: 100%; max-height: 90px; object-fit: contain; }
+
+/* ================= ③ 映像液晶エリア（拡大版・リールを上に重ねる） ================= */
+#stage-area {
+  position: relative;
+  width: 100%; height: 540px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 3px solid #333;
+  background: #000;
+  box-shadow: inset 0 0 18px rgba(0,0,0,.6);
+}
+#stage-bg, .stage-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
+.stage-video { object-fit: cover; }
+
+/* 動画が無い場合の代替グラデーション */
+#stage-area.stage-fallback-day     { background: linear-gradient(180deg, #7ec8ff 0%, #cfeaff 55%, #7fbf6a 100%); }
+#stage-area.stage-fallback-evening { background: linear-gradient(180deg, #ff9a52 0%, #ff5e62 55%, #4a2c52 100%); }
+#stage-area.stage-fallback-night   { background: linear-gradient(180deg, #0b0b2a 0%, #23234f 60%, #0a0a18 100%); }
+
+#stage-label {
+  position: absolute; top: 8px; left: 10px; z-index: 5;
+  background: rgba(0,0,0,.55); color: #fff;
+  padding: 3px 10px;
+  border-radius: 12px; font-size: 12px; letter-spacing: 1px;
+}
+
+/* HUD */
+#hud {
+  position: absolute; top: 8px; right: 10px; z-index: 5;
+  display: flex; gap: 6px; align-items: center;
+  font-size: 12px; color: #fff;
+}
+#hud > span { background: rgba(0,0,0,.55); padding: 3px 8px; border-radius: 10px; }
+.hud-mode.mode-normal { color: #cfe8ff; }
+.hud-mode.mode-chance { color: #ffd944; font-weight: bold; }
+.hud-zone { color: #ff6b6b; font-weight: bold; animation: zonePulse 1s infinite; }
+@keyframes zonePulse { 50% { opacity: .4; } }
+
+/* 開花状態パネル */
+#kaika-panel {
+  position: absolute; left: 10px; top: 42px; z-index: 6;
+  background: rgba(40, 0, 30, .65);
+  border: 1px solid #ff9ecb; color: #fff;
+  border-radius: 10px; padding: 6px 10px;
+  text-align: center; font-size: 12px;
+}
+.kaika-title { color: #ffb3d9; font-weight: bold; }
+#kaika-g { color: #fff; margin: 2px 0; }
+#kaika-buttons { display: flex; gap: 4px; justify-content: center; }
+.kaika-btn-img { width: 30px; height: 30px; object-fit: contain; }
+.kaika-btn-ph {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(#ff9ecb, #b0306e);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+
+/* 発展前兆ステージパネル */
+#hatten-panel {
+  position: absolute; right: 10px; top: 42px; z-index: 10;
+  background: rgba(10, 10, 50, .7);
+  border: 1px solid #7c9bff; color: #fff;
+  border-radius: 10px; padding: 6px 12px;
+  text-align: center; font-size: 12px;
+}
+.hatten-title { color: #9db8ff; font-weight: bold; }
+.hatten-color {
+  margin-top: 2px; font-weight: 900; font-size: 15px;
+  border-radius: 8px; padding: 1px 10px;
+  background: rgba(0,0,0,.5);
+}
+.color-blue    { color: #3aa0ff; }
+.color-yellow  { color: #ffd944; }
+.color-green   { color: #4ddb6a; }
+.color-red     { color: #ff4444; }
+.color-rainbow {
+  background: linear-gradient(90deg, #ff004c, #ff9900, #ffee00, #33ff66, #00ccff, #cc66ff, #ff004c);
+  background-size: 400% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: rainbowFlow 2s linear infinite;
+}
+
+/* キャラクター（動画の真ん中辺り） */
+#char-layer {
+  position: absolute; inset: 0; z-index: 4;
+  display: flex; align-items: center; justify-content: center;
+  padding-bottom: 200px;                  /* リール枠(中央下)と重ならないよう上寄せ */
+  pointer-events: none;
+  opacity: 0; transform: scale(.92);
+  transition: opacity .25s, transform .25s;
+}
+#char-layer.show { opacity: 1; transform: scale(1); }
+.char-img { max-height: 92%; max-width: 66%; object-fit: contain; filter: drop-shadow(0 4px 14px rgba(0,0,0,.6)); }
+.char-placeholder {
+  width: 140px; height: 140px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #6a6adf, #2b2b6e);
+  border: 3px solid #9d9dff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: bold; color: #fff;
+  text-shadow: 0 2px 4px #000;
+}
+
+/* セリフ */
+#serif-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 7;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.85) 40%);
+  padding: 8px 16px 7px;
+  font-size: 17px; text-align: center;
+  opacity: 0; transition: opacity .2s;
+  pointer-events: none;
+}
+#serif-bar.show { opacity: 1; }
+.serif-name { color: #bbb; font-size: 14px; margin-right: 4px; }
+
+/* ---- セリフ色（内部処理と連動） ---- */
+.serif-white  { color: #ffffff; }
+.serif-blue   { color: #4da6ff; text-shadow: 0 0 8px rgba(77,166,255,.7); }
+.serif-yellow { color: #ffd944; text-shadow: 0 0 8px rgba(255,217,68,.7); }
+.serif-red    { color: #ff4444; text-shadow: 0 0 10px rgba(255,68,68,.8); font-weight: bold; }
+.serif-rainbow {
+  font-weight: bold;
+  background: linear-gradient(90deg, #ff004c, #ff9900, #ffee00, #33ff66, #00ccff, #cc66ff, #ff004c);
+  background-size: 400% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: rainbowFlow 2s linear infinite;
+}
+@keyframes rainbowFlow { to { background-position: 400% 0; } }
+.serif-gold {
+  font-weight: bold;
+  background: linear-gradient(90deg, #8a6d1a, #ffd700, #fff8c9, #ffd700, #8a6d1a);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+  animation: goldFlow 2.4s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(255,215,0,.6));
+}
+@keyframes goldFlow { to { background-position: 300% 0; } }
+
+/* ================= 発展前兆ステージ：ひび割れ演出 =================
+ * 黒背景の動画を mix-blend-mode:screen で透明化して
+ * 通常ステージの画面（リール含む）に上から被せて合成する */
+#crack-layer {
+  position: absolute; inset: 0; z-index: 8;
+  pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+  /* 黒背景→透明合成:
+     z-index/opacityによりこのレイヤーはスタッキングコンテキスト(分離グループ)になるため、
+     子要素ではなくレイヤー自体に mix-blend-mode を指定して
+     下のステージ映像・リールとscreen合成する（黒(0,0,0)は無効果=透明扱い） */
+  mix-blend-mode: screen;
+}
+#crack-layer.show { opacity: 1; }
+.crack-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  /* レイヤー内で複数の割れ動画を重ねるため子側もscreen（黒が互いを隠さない） */
+  mix-blend-mode: screen;
+  /* 動画のリミテッドレンジ黒(16,16,16)による薄グレーのモヤを抑える */
+  filter: contrast(1.15) brightness(1.02);
+}
+/* 動画が無い場合のCSSひび割れ代替 */
+.crack-fallback {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 90px; color: rgba(255,255,255,.85);
+  text-shadow: 0 0 20px #fff;
+  background:
+    linear-gradient(105deg, transparent 48%, rgba(255,255,255,.75) 49.6%, transparent 51%),
+    linear-gradient(22deg,  transparent 46%, rgba(255,255,255,.55) 49.6%, transparent 53%),
+    linear-gradient(160deg, transparent 47%, rgba(255,255,255,.6) 49.6%, transparent 52%);
+  animation: crackIn .18s ease-out;
+}
+.crack-fallback.crack-lv2 { transform: rotate(28deg) scale(1.15); }
+.crack-fallback.crack-lv3 { transform: rotate(-20deg) scale(1.3); }
+@keyframes crackIn { from { opacity: 0; transform: scale(1.4); } }
+/* 色動画が無い場合の色フラッシュ代替 */
+.color-flash {
+  position: absolute; inset: 0;
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: colorFlash 1.3s ease-out;
+}
+.color-flash.color-rainbow {
+  background: linear-gradient(120deg, #ff004c, #ff9900, #ffee00, #33ff66, #00ccff, #cc66ff);
+}
+@keyframes colorFlash {
+  0% { opacity: 0; } 22% { opacity: .95; } 100% { opacity: 0; }
+}
+
+/* 発展表示（結果オーバーレイ内） */
+.result-title.result-develop { letter-spacing: 8px; }
+.develop-enemy { margin-top: 14px; }
+.develop-enemy img { max-height: 160px; max-width: 240px; object-fit: contain; filter: drop-shadow(0 0 18px rgba(255,255,255,.35)); }
+.enemy-silhouette {
+  width: 110px; height: 110px; margin: 0 auto;
+  border-radius: 50%; background: #111;
+  border: 2px solid #556;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 54px; filter: brightness(.35);
+}
+.develop-name { margin-top: 8px; font-size: 22px; color: #cdd8ff; font-weight: bold; }
+.develop-stars { margin-top: 6px; font-size: 20px; color: #ffd944; }
+
+/* センターポップアップ */
+#popup-layer {
+  position: absolute; inset: 0; z-index: 9;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.popup {
+  position: absolute;
+  font-size: 38px; font-weight: bold; text-align: center; color: #fff;
+  text-shadow: 0 3px 12px rgba(0,0,0,.8);
+  animation: popIn .18s ease-out;
+}
+.popup.out { opacity: 0; transition: opacity .2s; }
+@keyframes popIn { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.popup-plus  { color: #ff9ecb; font-size: 60px; -webkit-text-stroke: 2px #fff; }
+.popup-kaika { color: #ffb3d9; }
+.popup-end   { color: #99a; font-size: 28px; }
+.popup-ceiling { color: #ff4444; font-size: 46px; }
+.popup-rank  { color: #ffd944; }
+/* 色昇格ポップアップ */
+.popup-color-blue    { color: #3aa0ff; }
+.popup-color-yellow  { color: #ffd944; }
+.popup-color-green   { color: #4ddb6a; }
+.popup-color-red     { color: #ff4444; font-size: 46px; }
+.popup-color-rainbow {
+  background: linear-gradient(90deg, #ff004c, #ff9900, #ffee00, #33ff66, #00ccff, #cc66ff, #ff004c);
+  background-size: 400% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; font-size: 48px;
+  animation: rainbowFlow 1.6s linear infinite;
+}
+
+/* ================= ナビ（映像内・押し順ナビよりさらに上） ================= */
+.navi {
+  position: absolute; left: 0; right: 0; bottom: 322px;
+  z-index: 7; text-align: center;
+  font-size: 22px; font-weight: bold;
+  opacity: 0; transition: opacity .15s; pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0,0,0,.9);
+}
+.navi.show { opacity: 1; animation: naviBlink .3s 3; }
+@keyframes naviBlink { 50% { opacity: .3; } }
+
+/* ================= ⑧ リール枠 ＋ ④ 3D円筒リール =================
+ * 映像の上にオーバーレイ配置（中央下寄り） */
+#reel-frame {
+  position: absolute;
+  left: 50%; bottom: 44px;
+  transform: translateX(-50%);
+  z-index: 6;
+  width: 380px; height: 208px;
+  background: rgba(20, 20, 30, .92);
+  border: 5px solid #333;                 /* 参照HTMLの黒枠BOX */
+  border-radius: 8px;
+  overflow: hidden;                        /* ドラムのはみ出しをクロップ */
+  box-shadow: 0 4px 14px rgba(0,0,0,.55), inset 0 0 14px rgba(0,0,0,.7);
+}
+#reel-area {
+  position: absolute; inset: 0;
+  display: flex; gap: 14px; justify-content: center; align-items: stretch;
+}
+.reel3d {
+  position: relative;
+  height: 100%;
+  perspective: 900px;                      /* 円筒の奥行き感 */
+  transition: box-shadow .2s;
+}
+.drum {
+  position: absolute;
+  left: 0; top: 50%; margin-top: -30px;
+  width: 100%; height: 60px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.drum-cell {
+  position: absolute; left: 0; top: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #ffffff;                     /* 参照HTMLのリール面（白地） */
+  border: 2px solid #333;                  /* 図柄を囲う枠線 */
+  border-radius: 4px;
+  font-size: 34px;
+  backface-visibility: hidden;
+  transition: filter .15s;
+}
+/* リール図柄画像（image/reel/図柄名.png）。読み込み成功時のみ表示し絵文字と置き換え */
+.drum-cell .cell-img {
+  display: none;
+  width: 96%; height: 90%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.drum-cell.has-img .cell-img { display: block; }
+.drum-cell.has-img .cell-icon { display: none; }
+.sym-sev  { color: #e01030; font-weight: 900; font-size: 38px; font-family: Impact, sans-serif; }
+.sym-bsev { color: #1560e0; font-weight: 900; font-size: 38px; font-family: Impact, sans-serif; }
+.sym-bar  { color: #111; font-weight: 900; font-size: 22px; font-family: Impact, sans-serif;
+            background: linear-gradient(180deg,#f5f5f5,#ccc); letter-spacing: 1px; }
+.sym-haz  { color: #bbb; font-size: 22px; }
+
+/* リール窓のガラス風シェーディング＆中段ライン */
+.frame-shade {
+  position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,.75) 0%, rgba(0,0,0,0) 26%,
+    rgba(0,0,0,0) 74%, rgba(0,0,0,.75) 100%);
+}
+.payline {
+  position: absolute; left: 0; right: 0; top: 50%; z-index: 3;
+  height: 0; border-top: 1px dashed rgba(255,80,80,.35);
+  pointer-events: none;
+}
+
+/* ---- 台演出「リール暗転」----
+ * #reel-frame の子要素として重ね、reel-area(drum)より確実に前面に出す。
+ * 回転中・ボタン点灯中でもあえてリール面を暗く見せる完全な雰囲気演出。
+ * 当選確率・演出選択には一切関係ない。 */
+#reel-dark-overlay {
+  position: absolute; inset: 0; z-index: 5;
+  background: rgba(0, 0, 0, .94);
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+#reel-dark-overlay.show { opacity: 1; }
+
+/* ---- 台演出「シェイクビジョン」----
+ * #stage-area（映像液晶エリア）全体を揺らす完全な雰囲気演出。
+ * 回転中・ボタン点灯中に画面全体が小刻みに揺れる。
+ * 当選確率・演出選択には一切関係ない。
+ * #machine側に十分な余白(padding)があるため、はみ出しても見た目が破綻しない。 */
+#stage-area.shake-vision {
+  animation: shakeVisionAnim .32s linear infinite;
+  will-change: transform;
+}
+@keyframes shakeVisionAnim {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(-6px, 3px); }
+  20%  { transform: translate(6px, -4px); }
+  30%  { transform: translate(-5px, -5px); }
+  40%  { transform: translate(5px, 5px); }
+  50%  { transform: translate(-6px, 2px); }
+  60%  { transform: translate(6px, -2px); }
+  70%  { transform: translate(-4px, 5px); }
+  80%  { transform: translate(4px, -5px); }
+  90%  { transform: translate(-3px, 3px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ---- ゲーム数ボックス（リール枠の外・右下） ---- */
+#reel-gcount {
+  position: absolute; left: calc(50% + 198px); bottom: 46px; z-index: 6;
+  min-width: 58px; height: 30px;
+  background: rgba(0, 0, 0, .88);
+  border: 2px solid #666;
+  border-radius: 4px;
+  color: #7cfc66;
+  font-family: Consolas, "Courier New", monospace;
+  font-weight: bold; font-size: 16px;
+  line-height: 26px; text-align: center;
+  letter-spacing: 1px;
+  padding: 0 7px;
+  pointer-events: none;
+  text-shadow: 0 0 6px rgba(124, 252, 102, .7);
+}
+
+/* ---- リールライト：ボタンが押せる状態＝点灯(明) / 停止＝消灯(暗) ---- */
+.reel3d.lit {
+  box-shadow: 0 0 24px 4px rgba(255, 240, 150, .9);
+}
+.reel3d.lit::after {
+  content: ''; position: absolute; inset: 0; z-index: 2;
+  pointer-events: none; border-radius: 6px;
+  box-shadow: inset 0 0 20px 5px rgba(255, 240, 150, .5);
+}
+.reel3d.lit .drum-cell { filter: brightness(1.15); }
+.reel3d.dim .drum-cell { filter: brightness(.45); }
+
+/* ---- レア役・ベル時の点滅（1秒） ---- */
+.reel3d.blink { animation: reelBlink .25s linear infinite; }
+.reel3d.blink .drum-cell { animation: cellBlink .25s linear infinite; }
+@keyframes reelBlink {
+  0%, 100% { box-shadow: 0 0 26px 8px rgba(255,215,0,.95); }
+  50%      { box-shadow: 0 0 4px 1px rgba(255,215,0,.15); }
+}
+@keyframes cellBlink {
+  0%, 100% { filter: brightness(1.35); }
+  50%      { filter: brightness(.7); }
+}
+
+/* ================= 演出読み込みバー ================= */
+#inline-load {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 10px;
+  font-size: 12px; color: #335;
+}
+.inline-track {
+  flex: 1; height: 8px; border-radius: 4px;
+  background: #bbb; overflow: hidden;
+}
+#inline-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #4da6ff, #9d6bff);
+  transition: width .12s;
+}
+
+/* ================= 操作部（参照HTML準拠） ================= */
+#control-area {
+  display: flex; align-items: center;
+  margin: 12px 2px 6px;
+  min-height: 110px;
+  padding: 8px 16px;
+  /* レバーボタンUI.htmlの操作パネル台座を再現（ダークメタル） */
+  background: linear-gradient(180deg, #3d3d42, #29292e 55%, #1c1c20);
+  border: 1px solid #4a4a52;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.55), inset 0 -1px 2px rgba(255,255,255,.08),
+              0 3px 6px rgba(0,0,0,.35);
+}
+#control-area .key-hint { color: #9aa; }
+
+/* ---- 3D操作パネル（レバーボタンUI.html採用） ---- */
+#panel3d {
+  display: none;
+  flex: 1;
+  height: 172px;
+  position: relative;
+  min-width: 0;
+}
+#panel3d canvas { display: block; border-radius: 8px; }
+/* 3Dパネル有効時: CSS製レバー/ストップボタンを隠す（DOMは状態管理用に残る） */
+#control-area.has-3d #panel3d { display: block; }
+#control-area.has-3d #lever-btn,
+#control-area.has-3d #stop-buttons {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+button { font-family: inherit; cursor: pointer; }
+button:disabled { cursor: default; }
+.key-hint { font-size: 11px; color: #888; }
+
+/* ---- ⑤ 3Dレバー（レバーボタンUI.html参照: 黒光沢ボール＋クロームシャフト） ----
+ * 叩くとプレイヤー側(手前・下)へ倒れ、スプリングで揺れ戻る */
+#lever-btn.lever {
+  position: relative;
+  width: 78px; height: 108px;
+  flex-shrink: 0;
+  background: none; border: none;
+  margin-right: 26px;
+  perspective: 320px;               /* 手前に倒れる遠近感 */
+}
+.lever-arm {
+  position: absolute; left: 50%; bottom: 14px;
+  width: 0; height: 68px;
+  transform-origin: 50% 100%;       /* 根元を軸に回転 */
+  transform-style: preserve-3d;
+}
+.lever-stick {
+  position: absolute; left: -5px; bottom: 0;
+  width: 10px; height: 64px;
+  background: linear-gradient(90deg, #6a6a6a, #fdfdfd 38%, #c9c9c9 55%, #4a4a4a);
+  border-radius: 5px;
+  box-shadow: inset 0 0 2px rgba(255,255,255,.9), 2px 2px 4px rgba(0,0,0,.4);
+}
+.lever-ball {
+  position: absolute; left: -22px; top: -18px;   /* シャフト先端に接続 */
+  width: 44px; height: 44px; border-radius: 50%;
+  /* 黒のクリアコート球（参照HTMLのMeshPhysicalMaterial風） */
+  background: radial-gradient(circle at 32% 26%, #6b6b74, #232328 42%, #0a0a0d 72%, #000);
+  box-shadow:
+    inset -5px -7px 12px rgba(0,0,0,.75),
+    inset 4px 6px 9px rgba(255,255,255,.22),
+    0 5px 10px rgba(0,0,0,.5);
+  transition: filter .2s;
+}
+.lever-ball::after {
+  content: ''; position: absolute; left: 9px; top: 6px;
+  width: 13px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,.9);
+  filter: blur(1px);
+  transform: rotate(-25deg);
+}
+.lever-base {
+  position: absolute; left: 50%; bottom: 0; margin-left: -29px;
+  width: 58px; height: 20px;
+  background: linear-gradient(180deg, #9a9a9a, #5b5b5b 45%, #2e2e2e);
+  border-radius: 8px 8px 5px 5px;
+  box-shadow: 0 4px 7px rgba(0,0,0,.5), inset 0 1px 2px rgba(255,255,255,.5);
+}
+.lever-base::before {
+  content: ''; position: absolute; left: -8px; bottom: -6px;
+  width: 74px; height: 10px;
+  background: linear-gradient(180deg, #3d3d3d, #191919);
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,.6);
+}
+.lever-base::after {
+  content: ''; position: absolute; left: 50%; top: -5px; margin-left: -9px;
+  width: 18px; height: 10px; border-radius: 50% 50% 0 0;
+  background: linear-gradient(180deg, #ccc, #666);
+}
+#lever-btn.lever:disabled .lever-ball { filter: brightness(.62); }
+#lever-btn.lever.ready .lever-ball {
+  filter: none;
+  animation: leverPulse 1.3s infinite;
+}
+@keyframes leverPulse {
+  50% { box-shadow: inset -5px -7px 12px rgba(0,0,0,.75), inset 4px 6px 9px rgba(255,255,255,.22),
+                    0 0 18px 5px rgba(150,190,255,.75); }
+}
+/* 叩き動作: 手前(下)へ倒れる → スプリングで揺れ戻る（参照HTMLのバネ挙動） */
+#lever-btn.lever.pulled .lever-arm { animation: leverPull .6s cubic-bezier(.2,.7,.3,1) both; }
+@keyframes leverPull {
+  0%   { transform: rotateX(0deg); }
+  26%  { transform: rotateX(-58deg); }
+  52%  { transform: rotateX(12deg); }
+  72%  { transform: rotateX(-7deg); }
+  88%  { transform: rotateX(3deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+/* ---- ⑥ ストップボタン（レバーボタンUI.html参照: 銀ベゼル＋アクリル発光） ----
+ * 消灯=暗いアクリル / 押せる状態=青く発光 / 押した後=赤く発光 */
+#stop-buttons {
+  display: flex; gap: 24px;
+  flex: 1; justify-content: center;
+}
+#stop-buttons button {
+  position: relative;
+  width: 66px; height: 66px; padding: 0;
+  border-radius: 50%;
+  /* 銀色のベゼル */
+  background: radial-gradient(circle at 35% 28%, #f4f4f6, #c4c4cb 45%, #77777f 85%);
+  border: 2px solid #55555c;
+  box-shadow: 0 5px 10px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.6);
+  transition: transform .07s, box-shadow .15s;
+}
+#stop-buttons button::before {
+  content: ''; position: absolute; inset: 7px;
+  border-radius: 50%;
+  /* 消灯時: 黒いアクリク（クリアコート風の暗いドーム） */
+  background: radial-gradient(circle at 35% 28%, #5c5c64, #26262b 55%, #0c0c0f 90%);
+  box-shadow: inset 0 -5px 9px rgba(0,0,0,.6), inset 0 4px 6px rgba(255,255,255,.28);
+  transition: background .15s, box-shadow .15s;
+}
+#stop-buttons button .key-hint {
+  position: relative; z-index: 1;
+  color: rgba(255,255,255,.85); font-size: 15px; font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8);
+}
+#stop-buttons button:not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 4px rgba(0,0,0,.5), inset 0 2px 3px rgba(255,255,255,.6);
+}
+/* 押せる状態＝青く発光（リング＋コア） */
+#stop-buttons button.lit::before {
+  background: radial-gradient(circle at 35% 28%, #c9e9ff, #2f83ff 55%, #062a55 90%);
+  box-shadow: inset 0 -5px 9px rgba(0,0,25,.55), inset 0 4px 6px rgba(255,255,255,.55);
+}
+#stop-buttons button.lit {
+  box-shadow: 0 5px 10px rgba(0,0,0,.5), 0 0 22px 7px rgba(50, 140, 255, .9),
+              inset 0 2px 3px rgba(255,255,255,.6);
+  animation: stopPulse 1s infinite;
+}
+@keyframes stopPulse {
+  50% { box-shadow: 0 5px 10px rgba(0,0,0,.5), 0 0 7px 2px rgba(50,140,255,.35),
+                    inset 0 2px 3px rgba(255,255,255,.6); }
+}
+/* 押した後＝赤く発光 */
+#stop-buttons button.pressed::before {
+  background: radial-gradient(circle at 35% 28%, #ffc2cd, #ff2438 55%, #560008 90%);
+  box-shadow: inset 0 -5px 9px rgba(40,0,0,.55), inset 0 4px 6px rgba(255,255,255,.5);
+}
+#stop-buttons button.pressed {
+  box-shadow: 0 5px 10px rgba(0,0,0,.5), 0 0 16px 5px rgba(255, 40, 70, .8),
+              inset 0 2px 3px rgba(255,255,255,.6);
+}
+
+/* ---- ⑦ 右側ボタン列（上:PUSHボタン / 下:AUTOボタン） ---- */
+#right-btns {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-left: 26px;
+}
+#push-btn {
+  width: 84px; height: 46px;
+  background: linear-gradient(180deg, #ff6b6b, #e03030);   /* 参照HTMLの赤PUSH */
+  color: #fff; font-weight: bold; font-size: 15px;
+  letter-spacing: 1px;
+  border: 2px solid #b02020;
+  border-radius: 8px;
+  box-shadow: 0 4px 0 #8a1515, 0 5px 8px rgba(0,0,0,.3);
+  transition: transform .08s, box-shadow .08s, filter .2s;
+  /* PUSHが必要ない時は暗く表示 */
+  filter: brightness(.4) grayscale(.35);
+}
+#push-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8a1515; }
+/* PUSHが必要な時(.flash)は明るく点滅 */
+#push-btn.flash { animation: pushFlash .35s linear infinite; }
+@keyframes pushFlash {
+  0%, 100% { filter: brightness(1.35) drop-shadow(0 0 14px rgba(255,80,80,.95)); }
+  50%      { filter: brightness(.85); }
+}
+/* PUSHボタン画像（image/normal_push.png があれば<img>で差し替え表示） */
+#push-btn.has-image {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  height: 56px;
+  display: flex; align-items: center; justify-content: center;
+}
+#push-btn.has-image:active { transform: translateY(3px); box-shadow: none; }
+#push-btn-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+#auto-btn {
+  width: 84px; height: 40px;
+  background: linear-gradient(180deg, #556, #334);
+  color: #fff; font-weight: bold; font-size: 12px;
+  border: 2px solid #223;
+  border-radius: 8px;
+  box-shadow: 0 4px 0 #112, 0 5px 8px rgba(0,0,0,.3);
+  transition: transform .08s, box-shadow .08s;
+}
+#auto-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #112; }
+#auto-btn.on {
+  background: linear-gradient(180deg, #4fd07f, #1d9a4d);
+  border-color: #157a3a;
+  box-shadow: 0 4px 0 #0d5c2a, 0 0 12px rgba(60,220,120,.7);
+}
+
+/* ---- PUSH告知プロンプト（液晶内・リール枠の真上に大きく表示）----
+ * normal_push.png があれば文字ではなく画像で表示。
+ * リール枠(#reel-frame)と全く同じ位置・サイズの領域に重ね、
+ * background(z2)/effect(z3)/reel-frame(z6)/push-navi(z7)/crack(z8)/popup(z9)
+ * よりも前面(z-index)に表示することで、どのレイヤーの映像より確実に手前に出す。
+ * .show 中はクリック可能にし、操作部のPUSHボタン(#push-btn)を押した時と
+ * 同じ処理(UI.resolvePush)を呼べるようにする。 ---- */
+#push-prompt {
+  position: absolute;
+  left: 50%;
+  margin-left: -190px;        /* width(380px)の半分。リール枠と中心を揃える */
+  bottom: 44px;                /* リール枠と同じ下端位置 */
+  width: 380px;
+  height: 208px;                /* リール枠と同じサイズの領域に重ねる */
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;           /* 画像がでかでかと枠からはみ出すのを許可 */
+  text-align: center;
+  font-size: 44px; font-weight: 900; color: #ff5555;
+  -webkit-text-stroke: 2px #fff;
+  text-shadow: 0 0 18px rgba(255,60,60,.9);
+  opacity: 0; pointer-events: none;
+  transition: opacity .12s;
+}
+#push-prompt.has-image { -webkit-text-stroke: 0; text-shadow: none; }
+#push-prompt-img {
+  width: 250px; max-width: none;
+  object-fit: contain;
+  filter: drop-shadow(0 0 24px rgba(255,70,70,.95));
+}
+/* .show 中: 表示 + クリック可能 + 小刻みな拡大縮小アニメーション */
+#push-prompt.show {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: pushPromptBeat .5s ease-in-out infinite;
+}
+@keyframes pushPromptBeat {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.16); }
+}
+
+/* ---- 開花中の押し順ナビ（リール枠の少し上・演出画面上に表示） ----
+ * 3Dリール枠の外に置くことで見切れを防ぐ */
+#push-navi {
+  position: absolute;
+  left: calc(50% - 190px); width: 380px;
+  bottom: 262px;                     /* リール枠(bottom44+高さ208)のすぐ上 */
+  z-index: 7;
+  display: flex; gap: 14px; justify-content: center;
+  pointer-events: none;
+}
+#push-navi.show { animation: naviPop .25s ease-out; }
+@keyframes naviPop { from { transform: translateY(-10px); opacity: 0; } to { transform: none; opacity: 1; } }
+.push-navi-slot {
+  width: 100px; height: 54px;
+  display: flex; justify-content: center; align-items: center;
+  transition: transform .15s, opacity .15s, filter .15s;
+}
+.push-navi-slot img {
+  width: 44px; height: 44px; object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(255,158,203,.95));
+}
+.push-navi-ph {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffd1e6, #e0538f);
+  border: 2px solid #fff;
+  color: #fff; font-size: 22px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 10px rgba(255,158,203,.95);
+}
+/* 今押すべき順番 → 1.25倍で強調表示 */
+.push-navi-slot.now { transform: scale(1.25); }
+.push-navi-slot.now img,
+.push-navi-slot.now .push-navi-ph { animation: naviBeat .45s ease-in-out infinite; }
+/* まだの順番 → フィルターなし。等倍のまま普通に表示する */
+.push-navi-slot.dim { }
+/* 押し順をミスした場合 → まだ押していない以降の画像を少し暗くする（ペナルティ演出） */
+.push-navi-slot.missed { opacity: .5; filter: brightness(.55) grayscale(.35); }
+/* 押し終わった順番 → フェードではなく完全に消す（missedより優先） */
+.push-navi-slot.done { opacity: 0; }
+@keyframes naviBeat { 50% { transform: scale(1.12); } }
+
+/* ================= 情報表示 ================= */
+#info-box {
+  display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+  padding: 6px 10px 2px;
+  border-top: 1px solid #bbb;
+  font-size: 13px; color: #444;
+}
+#hud-payout { color: #c08800; font-weight: bold; }
+.hint-text { margin-left: auto; font-size: 11px; color: #999; }
+
+/* ================= 結果オーバーレイ ================= */
+#result-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0,0,0,.82);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+#result-overlay.show { opacity: 1; }
+.result-title { font-size: 42px; font-weight: bold; text-align: center; color: #fff; }
+.result-title.result-win  { color: #ffd944; text-shadow: 0 0 24px rgba(255,217,68,.9); }
+.result-title.result-lose { color: #8899bb; }
+.result-title.result-at {
+  background: linear-gradient(90deg, #ff004c, #ffee00, #00ccff, #ff004c);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: rainbowFlow 1.5s linear infinite;
+}
+.result-sub { margin-top: 12px; color: #ccc; font-size: 15px; text-align: center; }
+
+/* ================= 特殊演出（虹・フリーズ） ================= */
+#special-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+#special-overlay.show { opacity: 1; }
+.special-video { width: 100%; height: 100%; object-fit: contain; }
+.special-fallback {
+  font-size: 56px; font-weight: bold;
+  background: linear-gradient(90deg, #ff004c, #ff9900, #ffee00, #33ff66, #00ccff, #cc66ff);
+  background-size: 400% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: rainbowFlow 1.6s linear infinite;
+}
+
+/* ================= 初期ロード画面（バー＋％） ================= */
+#load-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: radial-gradient(ellipse at center, #202040, #0a0a14);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+  color: #fff;
+}
+.load-title { font-size: 32px; font-weight: bold; color: #fff; letter-spacing: 2px; }
+.load-sub { color: #99aadd; font-size: 15px; }
+.load-track {
+  width: 420px; max-width: 80vw; height: 14px;
+  background: #1c1c30; border-radius: 7px;
+  border: 1px solid #444; overflow: hidden;
+}
+#load-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #4da6ff, #cc66ff);
+  transition: width .15s;
+}
+#load-pct { font-size: 20px; color: #9ecbff; font-weight: bold; }
+#start-btn {
+  font-size: 22px; padding: 14px 46px;
+  background: linear-gradient(180deg, #e04658, #a01830);
+  color: #fff; border: 2px solid #ff7788; border-radius: 10px;
+  animation: zonePulse 1.4s infinite;
+}
+.load-note { color: #778; font-size: 12px; text-align: center; line-height: 1.7; }
+
+
+/* ================= 開花中サイドテープ演出（開花テープ.html参照） =================
+ * 開花状態中、映像画面の左右をスクロールする帯 */
+.kaika-tape {
+  position: absolute; top: 0; bottom: 0;
+  width: 54px; z-index: 5;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 2px, transparent 2px, transparent 4px),
+    linear-gradient(to right, #1a0008 0%, #4a001a 25%, #250010 50%, #4a001a 75%, #1a0008 100%);
+  border-left: 2px solid #3a0010;
+  border-right: 2px solid #3a0010;
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 0 15px rgba(0, 0, 0, 0.9),
+    inset 5px 0 10px rgba(0,0,0,0.5),
+    inset -5px 0 10px rgba(0,0,0,0.5);
+  overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transition: opacity .35s;
+}
+.kaika-tape.show { opacity: 1; }
+.kaika-tape.tape-left  { left: 0; }
+.kaika-tape.tape-right { right: 0; }
+/* 左右のLED発光ライン */
+.kaika-tape::before, .kaika-tape::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0;
+  width: 2px;
+  background: #ff0055;
+  box-shadow: 0 0 8px #ff0055, 0 0 15px #ff0055;
+  animation: tapeGlow 2s infinite ease-in-out;
+  z-index: 4;
+}
+.kaika-tape::before { left: 0; }
+.kaika-tape::after  { right: 0; }
+/* スクロールコンテナ（固定高300pxのグループを連結し-300pxでシームレスループ） */
+.tape-scroll {
+  display: flex; flex-direction: column;
+  width: 100%;
+  position: relative; z-index: 1;
+  animation: tapeScrollUp 4s linear infinite;
+}
+.tape-group {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+  height: 300px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+/* 縦書きテキスト */
+.tape-text {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: 21px;
+  font-family: 'Impact', 'Arial Black', "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.12em;
+  text-shadow:
+    -1px -1px 0 #000,  1px -1px 0 #000, -1px  1px 0 #000,  1px  1px 0 #000,
+    -2px -2px 0 #000,  2px -2px 0 #000, -2px  2px 0 #000,  2px  2px 0 #000,
+    0 0 6px #ff0055,   0 0 12px #ff0055,  0 0 20px #ff0055;
+  animation: tapeTextPulse 2s infinite ease-in-out;
+}
+/* 高確率（黄色・熱め） */
+.tape-text.tape-high {
+  color: #fffb00;
+  text-shadow:
+    -1px -1px 0 #000,  1px -1px 0 #000, -1px  1px 0 #000,  1px  1px 0 #000,
+    -2px -2px 0 #000,  2px -2px 0 #000, -2px  2px 0 #000,  2px  2px 0 #000,
+    -3px -3px 0 #4a001a, 3px -3px 0 #4a001a, -3px 3px 0 #4a001a, 3px 3px 0 #4a001a,
+    0 0 8px #ff6a00,  0 0 18px #ff2a00,  0 0 30px #ff0000;
+}
+/* チェリー画像 */
+.tape-img {
+  width: 38px; height: auto;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.8))
+    drop-shadow(0 0 12px rgba(255, 0, 85, 0.9));
+}
+/* 上下の画面端フェードマスク */
+.tape-mask {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom,
+    rgba(2,2,2,.98) 0%,
+    rgba(2, 2, 2, 0.9) 3%,
+    transparent 14%,
+    transparent 86%,
+    rgba(2, 2, 2, 0.9) 97%,
+    rgba(2,2,2,.98) 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+@keyframes tapeScrollUp {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-300px); }
+}
+@keyframes tapeGlow {
+  0%, 100% { opacity: 0.7; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.3); }
+}
+@keyframes tapeTextPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.03); filter: brightness(1.15); }
+}
+
+/* ============================================================
+ * 一発台追加スタイル
+ * ============================================================ */
+
+/* 第1停止で左以外を押した時: 黒背景 */
+#stage-area.black-bg #effect-layer,
+#stage-area.black-bg #background-layer,
+#stage-area.black-bg #stage-bg {
+  display: none;
+}
+#stage-area.black-bg {
+  background: #000 !important;
+}
+
+/* 演出セット背景画像レイヤー（image/background/番号.png）
+ * 枠(stage-area)いっぱいに表示し、この上にレバー演出MP4(#effect-layer)を
+ * screen合成で重ねる。実際のz-indexはDirector.js側でも明示的に設定される。 */
+#background-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+#background-layer img {
+  display: block;
+}
+
+/* 左押し推奨 表示 */
+#left-push-warning {
+  position: absolute;
+  inset: 0; z-index: 15;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#left-push-warning.show {
+  opacity: 1;
+}
+.lpw-left {
+  color: #ffffff;
+  font-size: 52px;
+  font-weight: 900;
+  text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 3px 8px rgba(0,0,0,0.9);
+  letter-spacing: 2px;
+}
+.lpw-osusume {
+  color: #ff2222;
+  font-size: 52px;
+  font-weight: 900;
+  text-shadow: 0 0 20px rgba(255,50,50,0.9), 0 3px 8px rgba(0,0,0,0.9);
+  letter-spacing: 2px;
+  margin-left: 8px;
+}
+
+/* 当否結果表示 */
+#result-display {
+  position: absolute;
+  inset: 0; z-index: 16;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+#result-display.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+#result-display.win-text,
+#result-display.result-win {
+  background: rgba(0, 0, 0, 0.7);
+}
+#result-display.lose-text,
+#result-display.result-lose {
+  background: rgba(0, 0, 0, 0.65);
+}
+.result-text {
+  font-size: 48px;
+  font-weight: bold;
+  text-align: center;
+}
+.win-text {
+  color: #ffd944;
+  text-shadow: 0 0 30px rgba(255,217,68,0.9), 0 4px 12px rgba(0,0,0,0.8);
+  animation: winPulse 0.7s infinite;
+}
+@keyframes winPulse {
+  50% { text-shadow: 0 0 10px rgba(255,217,68,0.3), 0 4px 12px rgba(0,0,0,0.8); }
+}
+.lose-text {
+  color: #8899bb;
+  text-shadow: 0 3px 8px rgba(0,0,0,0.8);
+}
+.result-sub {
+  margin-top: 16px;
+  color: #ccc;
+  font-size: 18px;
+  text-align: center;
+}
+
+/* 演出レイヤー */
+#effect-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* AUTO ボタン非表示 */
+#auto-btn { display: none !important; }
+
+/* プレイ済みメッセージ */
+#already-played-msg {
+  animation: fadeInMsg 0.5s ease-out;
+}
+@keyframes fadeInMsg {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

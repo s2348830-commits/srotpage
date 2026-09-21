@@ -1,0 +1,136 @@
+/* ============================================================
+ * js/game/GameState.js  ―  一発台 状態管理
+ *
+ * ■ レバーON時に内部抽選を行いWIN/LOSEを確定
+ * ■ 1日1回制限: localStorage に日付を保存
+ * ■ 演出・押し順によって結果は変わらない
+ *
+ * フロー:
+ *   レバーON → decideResult() → 演出 → 停止 → showResult()
+ * ============================================================ */
+(function () {
+  'use strict';
+
+  const DAILY_KEY = GAME_DATA.config.dailyLimitKey;
+
+  const state = {
+    phase: 'idle',              // idle / lever / stop1 / stop2 / stop3 / result / finished
+    internalResult: false,      // レバーON時に確定したWIN/LOSE
+    pushEffectActive: false,    // プッシュボタン演出が発生したか
+    finalResult: false,         // 最終結果（プッシュ再抽選後）
+    effectSet: null,            // 今回の演出セット
+    stopCount: 0,               // 停止ボタンを押した回数
+    firstStopReel: -1,          // 最初に停止したリール番号
+    todayPlayed: false          // 今日プレイ済みかどうか
+  };
+
+  const GameState = {
+    get() { return state; },
+
+    /* ---- 1日1回制限チェック ---- */
+    checkDailyLimit() {
+      try {
+        const last = localStorage.getItem(DAILY_KEY);
+        const today = new Date().toLocaleDateString('ja-JP');
+        if (last === today) {
+          state.todayPlayed = true;
+          return true;  // 今日プレイ済み
+        }
+        return false;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    /* ---- 今日プレイ済みとして記録 ---- */
+    recordPlay() {
+      try {
+        const today = new Date().toLocaleDateString('ja-JP');
+        localStorage.setItem(DAILY_KEY, today);
+        state.todayPlayed = true;
+      } catch (e) { /* noop */ }
+    },
+
+    /* ---- レバーON: 内部抽選を実行し結果を保持 ---- */
+    processLeverOn(effectSet) {
+      /* 内部抽選（1/1000）*/
+      state.internalResult = Lottery.decideResult();
+      /* プッシュボタン演出発生抽選（1/15）*/
+      state.pushEffectActive = Lottery.decidePushEffect(state.internalResult);
+      /* この時点での最終結果は内部抽選結果と同じ（プッシュ発生時は後でpushResolveで更新）*/
+      state.finalResult = state.internalResult;
+      state.effectSet = effectSet;
+      state.stopCount = 0;
+      state.firstStopReel = -1;
+      state.phase = 'lever';
+
+      console.log('[GameState] レバーON:', {
+        win: state.internalResult,
+        push: state.pushEffectActive
+      });
+
+      EventBus.emit('state:updated', state);
+      return state;
+    },
+
+    /* ---- プッシュボタンが解決された時（当たり確定時のみpush.mp4を流す）---- */
+    processPushResolve() {
+      if (state.pushEffectActive) {
+        /* 当たりの場合: そのまま当たり。ハズレの場合: 1/6で当たり可能性 */
+        const prev = state.finalResult;
+        state.finalResult = Lottery.pushReLottery(state.internalResult);
+        console.log('[GameState] プッシュ解決:', { before: prev, after: state.finalResult });
+      }
+      EventBus.emit('state:updated', state);
+    },
+
+    /* ---- 停止ボタン ---- */
+    processStop(reelIndex) {
+      state.stopCount++;
+      if (state.stopCount === 1) {
+        state.firstStopReel = reelIndex;
+        state.phase = 'stop1';
+      } else if (state.stopCount === 2) {
+        state.phase = 'stop2';
+      } else if (state.stopCount === 3) {
+        state.phase = 'stop3';
+      }
+      EventBus.emit('state:updated', state);
+    },
+
+    /* ---- 第1停止で左以外を押した場合のやり直し用 ----
+     * 停止の進行状況（stopCount・firstStopReel）だけをレバー直後の状態に戻す。
+     * internalResult・finalResult・effectSet・pushEffectActiveには一切触れないため、
+     * 再度回転させても内部抽選(当たり/はずれ)はレバーON時に決まったまま変わらない。 */
+    resetStopProgress() {
+      state.stopCount = 0;
+      state.firstStopReel = -1;
+      state.phase = 'lever';
+      EventBus.emit('state:updated', state);
+    },
+
+    /* ---- ゲーム終了 ---- */
+    processGameEnd() {
+      state.phase = 'finished';
+      this.recordPlay();
+      EventBus.emit('state:gameEnd', { win: state.finalResult });
+    },
+
+    /* ---- 管理者用: 結果を強制設定 ---- */
+    adminSetResult(win) {
+      state.internalResult = win;
+      state.finalResult = win;
+      EventBus.emit('state:updated', state);
+    },
+
+    /* ---- 管理者用: 日付制限をリセット ---- */
+    adminResetDaily() {
+      try {
+        localStorage.removeItem(DAILY_KEY);
+        state.todayPlayed = false;
+      } catch (e) { /* noop */ }
+    }
+  };
+
+  window.GameState = GameState;
+})();

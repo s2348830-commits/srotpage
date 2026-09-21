@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ひゃっからんぶる</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ 筐体 ============ -->
+<div id="machine-wrap">
+<div id="machine">
+
+  <!-- タイトルボード -->
+  <div id="title-board">ひゃっからんぶる</div>
+
+  <!-- 映像液晶エリア -->
+  <div id="stage-area" class="stage-fallback-day">
+    <div id="stage-bg"></div>
+
+    <!-- 演出セット背景画像レイヤー（image/background/番号.png） -->
+    <div id="background-layer"></div>
+
+    <!-- 背景演出動画レイヤー（通常演出MP4） -->
+    <div id="effect-layer"></div>
+
+    <!-- リールを囲う枠 ＋ 3D円筒リール -->
+    <div id="reel-frame">
+      <div id="reel-area"></div>
+      <div class="frame-shade"></div>
+      <div class="payline"></div>
+      <!-- 台演出「リール暗転」用オーバーレイ（回転中でもあえて画面を暗くする） -->
+      <div id="reel-dark-overlay"></div>
+    </div>
+
+    <!-- 押し順ナビ（演出として残す） -->
+    <div id="push-navi" class="hidden"></div>
+
+    <!-- ナビ（テキスト） -->
+    <div id="navi" class="navi"></div>
+
+    <!-- 黒背景→screen合成レイヤー（突入演出・PUSH演出に使用） -->
+    <div id="crack-layer"></div>
+
+    <!-- センターポップアップ（結果表示等） -->
+    <div id="popup-layer"></div>
+
+    <!-- PUSH告知プロンプト -->
+    <div id="push-prompt">⬇ PUSH!! ⬇</div>
+
+    <!-- 第1停止で左以外を押した場合の演出 -->
+    <div id="left-push-warning" class="hidden">
+      <span class="lpw-left">左押し</span><span class="lpw-osusume">推奨</span>
+    </div>
+
+    <!-- 当否結果表示 -->
+    <div id="result-display" class="hidden"></div>
+  </div>
+
+  <!-- 演出読み込みバー -->
+  <div id="inline-load" class="hidden">
+    <div class="inline-track"><div id="inline-bar"></div></div>
+    <span id="inline-pct">0%</span>
+  </div>
+
+  <!-- 操作部 -->
+  <div id="control-area">
+    <div id="panel3d"></div>
+    <button id="lever-btn" class="lever" disabled title="レバーON (Space)">
+      <span class="lever-arm">
+        <span class="lever-stick"></span>
+        <span class="lever-ball"></span>
+      </span>
+      <span class="lever-base"></span>
+    </button>
+
+    <div id="stop-buttons">
+      <button id="stop-0" disabled><span class="key-hint">1</span></button>
+      <button id="stop-1" disabled><span class="key-hint">2</span></button>
+      <button id="stop-2" disabled><span class="key-hint">3</span></button>
+    </div>
+
+    <div id="right-btns">
+      <button id="push-btn" title="PUSH (Enter)">PUSH</button>
+    </div>
+  </div>
+
+  <!-- 情報表示 -->
+  <div id="info-box">
+    <span>状態：<span id="hud-role">-</span></span>
+    <span class="hint-text">Space=レバー / 1,2,3=停止 / Enter=PUSH</span>
+  </div>
+</div>
+</div>
+
+<!-- 管理者ツール -->
+<div id="admin-panel"></div>
+
+<!-- 初期ロード画面 -->
+<div id="load-overlay">
+  <div class="load-title">ひゃっからんぶる</div>
+  <div class="load-sub">〜 一発台 〜</div>
+  <div class="load-track"><div id="load-bar"></div></div>
+  <div id="load-pct">0%</div>
+  <button id="start-btn" class="hidden">▶ START</button>
+  <div class="load-note">※ 1日1回のみプレイ可能です。</div>
+</div>
+
+<!-- ============ データ（データ駆動） ============ -->
+<script src="data/config.js"></script>
+<script src="data/reels.js"></script>
+<script src="data/effects.js"></script>
+
+<!-- ============ コア ============ -->
+<script src="js/core/EventBus.js"></script>
+<script src="js/core/RNG.js"></script>
+<script src="js/core/ResourceManager.js"></script>
+<script src="js/core/AudioManager.js"></script>
+
+<!-- ============ ゲーム ============ -->
+<script src="js/game/Lottery.js"></script>
+<script src="js/game/GameState.js"></script>
+<script src="js/game/ReelController.js"></script>
+<script src="js/game/UI.js"></script>
+<script src="js/game/AdminPanel.js"></script>
+<script src="js/game/Director.js"></script>
+<script src="js/main.js"></script>
+
+<!-- 3D操作パネル -->
+<script src="js/lib/three.min.js"></script>
+<script src="js/game/ControlPanel3D.js"></script>
+</body>
+</html>
