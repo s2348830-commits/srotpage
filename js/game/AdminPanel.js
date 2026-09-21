@@ -26,7 +26,6 @@
       window.GAME_DATA = window.GAME_DATA || {};
       GAME_DATA.config = GAME_DATA.config || {};
       if (override.normalWinRate) GAME_DATA.config.normalWinRate = override.normalWinRate;
-      if (override.pushWinRate) GAME_DATA.config.pushWinRate = override.pushWinRate;
       if (override.pushEffectRate) GAME_DATA.config.pushEffectRate = override.pushEffectRate;
       if (override.effectExpectations) GAME_DATA.config.effectExpectations = override.effectExpectations;
     } catch (e) { /* noop */ }
@@ -37,7 +36,6 @@
       const cfg = GAME_DATA.config || {};
       const override = {
         normalWinRate: cfg.normalWinRate,
-        pushWinRate: cfg.pushWinRate,
         pushEffectRate: cfg.pushEffectRate,
         effectExpectations: cfg.effectExpectations || {}
       };
@@ -205,21 +203,17 @@
     }
 
     const normalWinInput = buildProbRow('通常当選確率', 'normalWinRate');
-    const pushWinInput = buildProbRow('プッシュ当選確率', 'pushWinRate');
-    const pushEffectInput = buildProbRow('プッシュ演出発生率', 'pushEffectRate');
+    const pushEffectInput = buildProbRow('プッシュ演出発生率（当否には無関係）', 'pushEffectRate');
 
     const probSaveBtn = document.createElement('button');
     probSaveBtn.className = 'admin-btn';
     probSaveBtn.textContent = '💾 確率を保存（即時反映）';
     probSaveBtn.addEventListener('click', () => {
       const nw = Math.max(1, parseInt(normalWinInput.value, 10) || GAME_DATA.config.normalWinRate);
-      const pw = Math.max(1, parseInt(pushWinInput.value, 10) || GAME_DATA.config.pushWinRate);
       const pe = Math.max(1, parseInt(pushEffectInput.value, 10) || GAME_DATA.config.pushEffectRate);
       GAME_DATA.config.normalWinRate = nw;
-      GAME_DATA.config.pushWinRate = pw;
       GAME_DATA.config.pushEffectRate = pe;
       normalWinInput.value = nw;
-      pushWinInput.value = pw;
       pushEffectInput.value = pe;
       persistConfigOverride();
       UI.showStatus('確率設定を保存しました（即時反映）');
@@ -614,9 +608,8 @@
       'window.GAME_DATA = window.GAME_DATA || {};\n\n' +
       'GAME_DATA.config = {\n' +
       '  /* ---- 一発台 基本設定 ---- */\n' +
-      '  normalWinRate: ' + cfg.normalWinRate + ',           // 通常当選確率の分母（1/' + cfg.normalWinRate + '）\n' +
-      '  pushWinRate: ' + cfg.pushWinRate + ',              // プッシュボタン演出発生時の当選確率の分母（1/' + cfg.pushWinRate + '）\n' +
-      '  pushEffectRate: ' + cfg.pushEffectRate + ',          // プッシュボタン演出発生率の分母（1/' + cfg.pushEffectRate + '）\n\n' +
+      '  normalWinRate: ' + cfg.normalWinRate + ',           // 通常当選確率の分母（1/' + cfg.normalWinRate + '）※実際の当選確率はこの値のみで決まる\n' +
+      '  pushEffectRate: ' + cfg.pushEffectRate + ',          // プッシュボタン演出発生率の分母（1/' + cfg.pushEffectRate + '）※見た目の演出のみで当否には無関係\n\n' +
       '  /* ---- 1日1回制限 ---- */\n' +
       '  dailyLimitKey: ' + JSON.stringify(cfg.dailyLimitKey) + ',  // localStorage保存キー\n\n' +
       '  /* ---- 演出タイミング ---- */\n' +

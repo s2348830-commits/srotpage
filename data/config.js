@@ -5,9 +5,8 @@ window.GAME_DATA = window.GAME_DATA || {};
 
 GAME_DATA.config = {
   /* ---- 一発台 基本設定 ---- */
-  normalWinRate: 1000,        // 通常当選確率（1/1000）
-  pushWinRate: 6,             // プッシュボタン演出発生時の当選確率（1/6）
-  pushEffectRate: 15,         // プッシュボタン演出発生率（1/15）
+  normalWinRate: 1000,        // 通常当選確率（1/1000）※実際の当選確率はこの値のみで決まる
+  pushEffectRate: 15,         // プッシュボタン演出発生率（1/15）※見た目の煽り演出の発生率で、当否には一切影響しない
 
   /* ---- 1日1回制限 ---- */
   dailyLimitKey: 'hyakka_lastPlayedDate',  // localStorage保存キー

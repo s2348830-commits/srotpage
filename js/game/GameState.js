@@ -103,12 +103,14 @@
       return state;
     },
 
-    /* ---- プッシュボタンが解決された時（当たり確定時のみpush.mp4を流す）---- */
+    /* ---- プッシュボタンが解決された時 ----
+     * ★PUSH演出は当否を変えない（Lottery.resolvePushEffect参照）。
+     *   当たり確定G中なら「当たり煽り」としてpush.mp4を流し、
+     *   ハズレ確定G中なら「ガセ」として何も起きない。 */
     processPushResolve() {
       if (state.pushEffectActive) {
-        /* 当たりの場合: そのまま当たり。ハズレの場合: 1/6で当たり可能性 */
         const prev = state.finalResult;
-        state.finalResult = Lottery.pushReLottery(state.internalResult);
+        state.finalResult = Lottery.resolvePushEffect(state.internalResult);
         console.log('[GameState] プッシュ解決:', { before: prev, after: state.finalResult });
       }
       EventBus.emit('state:updated', state);
