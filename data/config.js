@@ -5,7 +5,7 @@ window.GAME_DATA = window.GAME_DATA || {};
 
 GAME_DATA.config = {
   /* ---- 一発台 基本設定 ---- */
-  normalWinRate: 1,        // 通常当選確率（1/1000）
+  normalWinRate: 1000,        // 通常当選確率（1/1000）
   pushWinRate: 6,             // プッシュボタン演出発生時の当選確率（1/6）
   pushEffectRate: 15,         // プッシュボタン演出発生率（1/15）
 

@@ -13,6 +13,14 @@
 
   const DAILY_KEY = GAME_DATA.config.dailyLimitKey;
 
+  /* 保存用の日付文字列。端末のロケール設定に左右されないよう
+   * YYYY-MM-DD 形式（端末のローカル日付）に固定する。 */
+  function todayStr() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
   const state = {
     phase: 'idle',              // idle / lever / stop1 / stop2 / stop3 / result / finished
     internalResult: false,      // レバーON時に確定したWIN/LOSE
@@ -27,32 +35,54 @@
   const GameState = {
     get() { return state; },
 
-    /* ---- 1日1回制限チェック ---- */
+    /* ---- 1日1回制限チェック ----
+     * localStorageが使えない環境（file://のSafari・プライベートブラウズ等）では
+     * 例外になる。その場合は制限をかけられないので「未プレイ」扱いで通すが、
+     * 黙って通すと不具合に気づけないため必ずコンソールに警告を出す。 */
     checkDailyLimit() {
       try {
         const last = localStorage.getItem(DAILY_KEY);
-        const today = new Date().toLocaleDateString('ja-JP');
-        if (last === today) {
+        const today = todayStr();
+        console.log('[GameState] 制限チェック:', { saved: last, today: today });
+        /* 旧バージョンは toLocaleDateString('ja-JP') 形式で保存していたため、
+         * そちらの形式で残っている値も「今日プレイ済み」として扱う。 */
+        const legacy = new Date().toLocaleDateString('ja-JP');
+        if (last === today || last === legacy) {
           state.todayPlayed = true;
           return true;  // 今日プレイ済み
         }
         return false;
       } catch (e) {
+        console.warn('[GameState] localStorageが利用できないため1日1回制限は無効です:', e);
         return false;
       }
     },
 
-    /* ---- 今日プレイ済みとして記録 ---- */
+    /* ---- 今日プレイ済みとして記録 ----
+     * 書き込み直後に読み戻して検証する。保存できていない場合は
+     * 静かに無視せずコンソールへ出す（アプリ内ブラウザ等の切り分け用）。 */
     recordPlay() {
       try {
-        const today = new Date().toLocaleDateString('ja-JP');
+        const today = todayStr();
         localStorage.setItem(DAILY_KEY, today);
+        if (localStorage.getItem(DAILY_KEY) !== today) {
+          throw new Error('書き込み検証に失敗（保存されていません）');
+        }
         state.todayPlayed = true;
-      } catch (e) { /* noop */ }
+        console.log('[GameState] 本日プレイ済みとして記録しました:', today);
+      } catch (e) {
+        console.error('[GameState] 1日1回制限の保存に失敗しました:', e);
+      }
     },
 
     /* ---- レバーON: 内部抽選を実行し結果を保持 ---- */
     processLeverOn(effectSet) {
+      /* ★ここで「本日プレイ済み」を記録する。
+       * 以前はゲームを最後まで遊び切った processGameEnd() でしか記録していなかったため、
+       * 演出中にリロード／タブを閉じる／戻る等で離脱すると未プレイ扱いのまま残り、
+       * 何度でも遊べてしまっていた。レバーを引いた＝1回消費、とみなす。 */
+      this.recordPlay();
+
       /* 内部抽選（1/1000）*/
       state.internalResult = Lottery.decideResult();
       /* プッシュボタン演出発生抽選（1/15）*/
